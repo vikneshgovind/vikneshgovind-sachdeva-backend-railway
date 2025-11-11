@@ -96,7 +96,7 @@ public class SecurityConfig {
 	private CorsConfigurationSource corsConfigurationSource() {
 		// create a object for corsConfiguration
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+		config.setAllowedOrigins(List.of("https://sachdeva-roadlines.netlify.app", "http://localhost:5174"));
 		config.setAllowedMethods(List.of("GET", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"));
 		config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 		config.setAllowCredentials(true);
