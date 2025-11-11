@@ -55,8 +55,17 @@ public class AuthController {
 
 			final String jwtToken = jwtUtil.generateToken(userDetails);
 
-			ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken).httpOnly(true).path("/")
-					.maxAge(Duration.ofDays(1)).sameSite("Strict").build();
+			/*ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken).httpOnly(true).path("/")
+					.maxAge(Duration.ofDays(1)).sameSite("Strict").build(); */
+			
+			ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
+				    .httpOnly(true)
+				    .secure(true) // must be true for SameSite=None
+				    .path("/")
+				    .maxAge(Duration.ofDays(1))
+				    .sameSite("None") // allow cross-site cookie
+				    .build();
+			
 			return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
 					.body(new AuthResponse(request.getEmail(), jwtToken));
 
