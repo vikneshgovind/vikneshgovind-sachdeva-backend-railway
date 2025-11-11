@@ -29,7 +29,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
 	private static final List<String> PUBLIC_URLS = List.of("/login", "/register", "/send-reset-otp", "/reset-password",
 			"/logout");
-
+/*
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
@@ -85,6 +85,58 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 		}
 
 		filterChain.doFilter(request, response);
+	}
+	
+*/
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+	        throws ServletException, IOException {
+
+	    String path = request.getServletPath();
+
+	    if (PUBLIC_URLS.contains(path)) {
+	        filterChain.doFilter(request, response);
+	        return;
+	    }
+
+	    String jwt = null;
+	    String email = null;
+
+	    // 1️⃣ Check Authorization header (supports "Bearer<space>" or "Bearer<no-space>")
+	    final String authorizationHeader = request.getHeader("Authorization");
+	    if (authorizationHeader != null && authorizationHeader.toLowerCase().startsWith("bearer")) {
+	        jwt = authorizationHeader.substring(6).trim(); // trim in case no space
+	    }
+
+	    // 2️⃣ If not found in header, check cookies
+	    if (jwt == null) {
+	        Cookie[] cookies = request.getCookies();
+	        if (cookies != null) {
+	            for (Cookie cookie : cookies) {
+	                if ("jwt".equals(cookie.getName())) {
+	                    jwt = cookie.getValue();
+	                    break;
+	                }
+	            }
+	        }
+	    }
+
+	    // 3️⃣ Validate token and set security context
+	    if (jwt != null) {
+	        email = jwtUtil.extractEmail(jwt);
+	        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+	            UserDetails userDetails = appUserDetailsService.loadUserByUsername(email);
+	            if (jwtUtil.validateToken(jwt, userDetails)) {
+	                UsernamePasswordAuthenticationToken authenticationToken =
+	                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+	                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+	                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+	            }
+	        }
+	    }
+
+	    filterChain.doFilter(request, response);
 	}
 
 }

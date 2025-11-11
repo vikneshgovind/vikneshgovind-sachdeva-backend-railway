@@ -46,6 +46,8 @@ public class AuthController {
 
 	private final ProfileService profileService;
 
+	/*
+	 * 
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody AuthRequest request) {
 
@@ -55,8 +57,7 @@ public class AuthController {
 
 			final String jwtToken = jwtUtil.generateToken(userDetails);
 
-			/*ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken).httpOnly(true).path("/")
-					.maxAge(Duration.ofDays(1)).sameSite("Strict").build(); */
+			//ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken).httpOnly(true).path("/").maxAge(Duration.ofDays(1)).sameSite("Strict").build(); 
 			
 			ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
 				    .httpOnly(true)
@@ -92,10 +93,54 @@ public class AuthController {
 	private void authenticate(String email, String password) {
 		authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
 
+	} 
+	*/
+
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+	    try {
+	        authenticate(request.getEmail(), request.getPassword());
+	        final UserDetails userDetails = appUserdetailsService.loadUserByUsername(request.getEmail());
+
+	        final String jwtToken = jwtUtil.generateToken(userDetails);
+
+	        // 1. HttpOnly cookie for desktop
+	        ResponseCookie cookie = ResponseCookie.from("jwt", jwtToken)
+	                .httpOnly(true)
+	                .secure(true) // must be true for HTTPS and must be true for SameSite=None
+	                .path("/")
+	                .maxAge(Duration.ofDays(1))
+	                .sameSite("None") // allow cross-site
+	                .build(); 
+	        
+	        // 2. Return token in response body as well for mobile / JS clients
+	        AuthResponse responseBody = new AuthResponse(request.getEmail(), jwtToken);
+	        
+	        
+
+	        return ResponseEntity.ok()
+	                .header(HttpHeaders.SET_COOKIE, cookie.toString()) 
+	                .body(responseBody); // mobile JS can use jwtToken from response body
+
+	    } catch (BadCredentialsException bcx) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                .body(Map.of("error", true, "message", "Email or password is incorrect"));
+	    } catch (DisabledException dex) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(Map.of("error", true, "message", "Account is disabled"));
+	    } catch (Exception ex) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(Map.of("error", true, "message", "Authentication failed"));
+	    }
 	}
 
-	/* we there the user is authenticated or not */
+	private void authenticate(String email, String password) {
+	    authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+	}
 
+	
+	
+	/* we there the user is authenticated or not */
 	@GetMapping("/is-authenticated")
 	public ResponseEntity<Boolean> isAuthenticated(
 			@CurrentSecurityContext(expression = "authentication?.name") String email) {
