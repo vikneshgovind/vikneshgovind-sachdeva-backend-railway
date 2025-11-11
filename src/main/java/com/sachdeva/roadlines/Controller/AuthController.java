@@ -160,8 +160,16 @@ public class AuthController {
 	// LogOut API method
 	@PostMapping("/logout")
 	public ResponseEntity<?> logout(HttpServletResponse response) {
-		ResponseCookie cookie = ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0)
-				.sameSite("Strict").build();
+		/* ResponseCookie cookie = ResponseCookie.from("jwt", "").httpOnly(true).secure(false).path("/").maxAge(0)
+				.sameSite("Strict").build(); */
+		ResponseCookie cookie = ResponseCookie.from("jwt", "")
+			    .httpOnly(true)
+			    .secure(true)
+			    .path("/")
+			    .maxAge(0)
+			    .sameSite("None")
+			    .build();
+
 		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body("Logged out successfully!");
 	}
 
