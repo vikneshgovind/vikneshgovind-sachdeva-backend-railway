@@ -139,6 +139,8 @@ public class ProfileServiceImpl implements ProfileService {
 	// send OTP for (account verification)
 	@Override
 	public void sendOtp(String email) {
+		
+		System.out.println("verificeation OTP method call for sendd the OTP");
 
 		UserEntity existingUser = userRepository.findByEmail(email)
 				.orElseThrow(() -> new UsernameNotFoundException("User not founded " + email));
