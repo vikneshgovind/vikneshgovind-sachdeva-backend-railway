@@ -2,7 +2,7 @@ package com.sachdeva.roadlines.Service.Implementation;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadLocalRandom; 
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -167,8 +167,11 @@ public class ProfileServiceImpl implements ProfileService {
 			System.out.println("Entered the Send OTP Function send a Email ");
 			emailService.sendOtpEmail(existingUser.getEmail(), existingUser.getVerifyOtp());
 		} catch (Exception ex) {
-			throw new RuntimeException("Unable to send email");
+		    ex.printStackTrace();
+		    throw new RuntimeException("Unable to send email: " + ex.getMessage());
+//		    throw new RuntimeException("Unable to send email");
 		}
+		
 	}
 
 	// set IsAccountVerified true
