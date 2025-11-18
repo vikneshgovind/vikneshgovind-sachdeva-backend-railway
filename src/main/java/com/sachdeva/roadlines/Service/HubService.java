@@ -13,6 +13,8 @@ import com.sachdeva.roadlines.DTO.hub.HubEntryRequest;
 import com.sachdeva.roadlines.DTO.hub.HubResponse;
 import com.sachdeva.roadlines.DTO.hub.XLFileRequest;
 import com.sachdeva.roadlines.DTO.hub.XLFileResponse;
+import com.sachdeva.roadlines.DTO.hub.XlTestRequest;
+import com.sachdeva.roadlines.DTO.hub.XlTestResponse;
 import com.sachdeva.roadlines.Entity.HubEntity;
 
 public interface HubService {
@@ -46,9 +48,13 @@ public interface HubService {
 
 	// List of XlFileRequest convert to List of HubRespone and save that
 	List<HubEntity> convertXlRequestListToEntityListAndSave(List<XLFileRequest> xlRequestList);
+	// -- test
+	List<HubEntity> convertXlTestRequestListToEntityListAndSave(List<XlTestRequest> xlTestRequestList);
 
 	// HubEntity -> XlFileRsponse
 	XLFileResponse convertToXlResponse(HubEntity hubRequest);
+	// -- test
+	XlTestResponse convertToXlResponseTest(HubEntity hubRequest);
 	
 	// bulk Bill creation
 	BulkBillResponse getPartyPendingSummaryToBulkBill(String partyName);

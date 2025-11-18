@@ -3,6 +3,7 @@ package com.sachdeva.roadlines.Service.Implementation;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,8 @@ import com.sachdeva.roadlines.DTO.hub.HubEntryRequest;
 import com.sachdeva.roadlines.DTO.hub.HubResponse;
 import com.sachdeva.roadlines.DTO.hub.XLFileRequest;
 import com.sachdeva.roadlines.DTO.hub.XLFileResponse;
+import com.sachdeva.roadlines.DTO.hub.XlTestRequest;
+import com.sachdeva.roadlines.DTO.hub.XlTestResponse;
 import com.sachdeva.roadlines.Entity.ActivityLogEntity;
 import com.sachdeva.roadlines.Entity.HubEntity;
 import com.sachdeva.roadlines.Enum.HubStatus;
@@ -67,6 +70,14 @@ public class HubServiceImpl implements HubService {
 
 	private HubStatus checkStatus(Integer lorryReceiptAmount, Integer rebate, Integer afterRebate, Integer others,
 			Integer cashReceiptAmount, Integer paidAmount, Integer balanceAmount) {
+		
+
+		// PAID
+		if (lorryReceiptAmount != null && cashReceiptAmount != null && paidAmount != null && balanceAmount != null
+				&& balanceAmount == 0 && paidAmount.equals(cashReceiptAmount)) {
+			return HubStatus.PAID;
+		}
+		
 		// INITIATED
 		if (lorryReceiptAmount != null && (cashReceiptAmount == null || cashReceiptAmount == 0)) {
 			return HubStatus.INITIATED;
@@ -76,12 +87,6 @@ public class HubServiceImpl implements HubService {
 		if (cashReceiptAmount != null && cashReceiptAmount > 0
 				&& (paidAmount == null || paidAmount == 0 || balanceAmount == null || balanceAmount > 0)) {
 			return HubStatus.PENDING;
-		}
-
-		// PAID
-		if (lorryReceiptAmount != null && cashReceiptAmount != null && paidAmount != null && balanceAmount != null
-				&& balanceAmount == 0 && paidAmount.equals(cashReceiptAmount)) {
-			return HubStatus.PAID;
 		}
 
 		return HubStatus.INITIATED;
@@ -129,78 +134,134 @@ public class HubServiceImpl implements HubService {
 				.balanceAmount(hubRequest.getBalanceAmount()).paymentStatus(hubRequest.getPaymentStatus())
 				.createdAt(hubRequest.getCreatedAt()).updatedAt(hubRequest.getUpdatedAt()).build();
 	}
+	
+	
+	// Shared helper to save + log + return( save the hub record and save log)
+    private HubResponse saveAndLog(HubEntity entity, String message) {
+    	
+    	// save the updated hub Entity
+        HubEntity saved = hubRepository.save(entity);
+        
+        // register the log
+		saveLog("Updated", saved.getLorryReceiptNo(), saved.getInwardNo(), message, ActivityLogUtil.getCurrentuserId());
+				
+		// entity to HubResponse
+        return convertToHubRespone(saved);
+    }
+    
+    
 	@Override
 	public HubResponse updateHub(long lorryReceiptNo, HubEditRequest request) {
 
 		// find existing entry
 		HubEntity existingRecord = hubRepository.findByLorryReceiptNo(lorryReceiptNo)
 				.orElseThrow(() -> new IllegalArgumentException("LR number " + lorryReceiptNo + " not found"));
-
-		// update fields (don’t overwrite ID, createdAt, inwardNo)
-//		existingRecord.setInwardNo(request.getInwardNo());
-		existingRecord.setPartyName(request.getPartyName());
-		existingRecord.setLorryReceiptDate(request.getLorryReceiptDate());
-
-		existingRecord.setPks(request.getPks());
-		existingRecord.setWeight(request.getWeight());
-		existingRecord.setLorryReceiptAmount(request.getLorryReceiptAmount());
-		existingRecord.setFromAddress(request.getFromAddress());
-
-		if (request.getBranch() != null) {
+		
+		HubStatus status = existingRecord.getPaymentStatus();
+		
+		/* update fields (don’t overwrite ID, createdAt, inwardNo) */
+				
+		//---------------------- INITIATED records update ---------------------
+		if(status == HubStatus.INITIATED) {
+	
+			existingRecord.setLorryReceiptDate(request.getLorryReceiptDate());
+			existingRecord.setFromAddress(request.getFromAddress());
 			existingRecord.setBranch(request.getBranch());
+			existingRecord.setPartyName(request.getPartyName());
+			existingRecord.setPks(request.getPks());
+			existingRecord.setWeight(request.getWeight());
+			existingRecord.setLorryReceiptAmount(request.getLorryReceiptAmount());
+			
+			return saveAndLog(existingRecord, "Updated the INITIATED Record ");
 		}
-		if (request.getPaymentType() != null) {
-			existingRecord.setPaymentType(request.getPaymentType());
-		}
+		
 
-		if (request.getCashReceiptDate() != null) { // Now optional in DTO
-			existingRecord.setCashReceiptDate(request.getCashReceiptDate());
-		}
-		if (request.getPaymentDate() != null) { // Now optional in DTO
-			existingRecord.setPaymentDate(request.getPaymentDate());
-		}
+		//---------------------- BENDING Record updated ---------
+		if(status == HubStatus.PENDING) {
+			
+			if (existingRecord.getBalanceAmount() != 0 && !Objects.equals(existingRecord.getPaidAmount(), existingRecord.getCashReceiptAmount())) {
 
-		// Integer/Wrapper fields - check for null before setting to primitive int
-		// NOTE: This assumes the HubEntity uses primitive 'int' (which it does).
-		// If the DTO value is NULL, we skip setting the entity value.
+				
+				existingRecord.setLorryReceiptDate(request.getLorryReceiptDate());
+				existingRecord.setFromAddress(request.getFromAddress());
+				existingRecord.setBranch(request.getBranch());
+				existingRecord.setPartyName(request.getPartyName());
+				existingRecord.setPks(request.getPks());
+				existingRecord.setWeight(request.getWeight());
+				existingRecord.setLorryReceiptAmount(request.getLorryReceiptAmount());
+				
+//				second part 
+				
+				existingRecord.setCashReceiptNo(request.getCashReceiptNo());
+				existingRecord.setCashReceiptDate(request.getCashReceiptDate());
+				existingRecord.setRebate(request.getRebate());
+				existingRecord.setAfterRebate(request.getLorryReceiptAmount() - request.getRebate());
+				existingRecord.setOthers(request.getOthers());
+				existingRecord.setCashReceiptAmount(request.getAfterRebate() + request.getOthers());
+				existingRecord.setPaidAmount(request.getPaidAmount());
+				existingRecord.setPaymentDate(request.getPaymentDate());
+				existingRecord.setPaymentType(request.getPaymentType());
+				existingRecord.setBalanceAmount(request.getCashReceiptAmount() - request.getPaidAmount()); 
+				
+				existingRecord.setPaymentStatus(checkStatus(existingRecord.getLorryReceiptAmount(), existingRecord.getRebate(),
+						existingRecord.getAfterRebate(), existingRecord.getOthers(), request.getCashReceiptAmount(),
+						request.getPaidAmount(), request.getBalanceAmount()));
+				
+				return saveAndLog(existingRecord, "Updated the PENDING Record");
+			}
+		}
+		
+		//---------------------- PAID Record updated ---------
+        if (status == HubStatus.PAID) {
+            if (Objects.equals(existingRecord.getBalanceAmount(), 0)
+                    && Objects.equals(existingRecord.getPaidAmount(), existingRecord.getCashReceiptAmount())) {
 
-		if (request.getCashReceiptNo() != null) {
-			existingRecord.setCashReceiptNo(request.getCashReceiptNo());
-		}
+                existingRecord.setLorryReceiptDate(request.getLorryReceiptDate());
+                existingRecord.setFromAddress(request.getFromAddress());
+                existingRecord.setBranch(request.getBranch());
+                existingRecord.setPartyName(request.getPartyName());
+                existingRecord.setPks(request.getPks());
+                existingRecord.setWeight(request.getWeight());
 
-		if (request.getRebate() != null) {
-			existingRecord.setRebate(request.getRebate());
-		}
-		if (request.getAfterRebate() != null) {
-			existingRecord.setAfterRebate(request.getAfterRebate());
-		}
-		if (request.getOthers() != null) {
-			existingRecord.setOthers(request.getOthers());
-		}
-		if (request.getCashReceiptAmount() != null) {
-			existingRecord.setCashReceiptAmount(request.getCashReceiptAmount());
-		}
-		if (request.getPaidAmount() != null) {
-			existingRecord.setPaidAmount(request.getPaidAmount());
-		}
-		if (request.getBalanceAmount() != null) {
-			existingRecord.setBalanceAmount(request.getBalanceAmount());
-		}
+                boolean changed = !Objects.equals(existingRecord.getLorryReceiptAmount(), request.getLorryReceiptAmount())
+                        || !Objects.equals(existingRecord.getRebate(), request.getRebate())
+                        || !Objects.equals(existingRecord.getPaidAmount(), request.getPaidAmount());
 
-		existingRecord.setPaymentStatus(checkStatus(existingRecord.getLorryReceiptAmount(), existingRecord.getRebate(),
-				existingRecord.getAfterRebate(), existingRecord.getOthers(), request.getCashReceiptAmount(),
-				request.getPaidAmount(), request.getBalanceAmount()));
+                if (changed) {
+                    existingRecord.setLorryReceiptAmount(request.getLorryReceiptAmount());
+                    existingRecord.setRebate(request.getRebate() != null ? request.getRebate() : 0);
+                    existingRecord.setAfterRebate(request.getLorryReceiptAmount() - existingRecord.getRebate());
+                    existingRecord.setOthers(request.getOthers() != null ? request.getOthers() : 0);
+                    existingRecord.setCashReceiptAmount(existingRecord.getAfterRebate() + existingRecord.getOthers());
 
-		// save updated record
-		HubEntity updatedRecord = hubRepository.save(existingRecord);
+                    if (request.getPaidAmount() != null && request.getPaidAmount() > existingRecord.getCashReceiptAmount()) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "paidAmount can't be greater than cashReceiptAmount");
+                    }
 
-		// register the log
-		saveLog("Updated", updatedRecord.getLorryReceiptNo(), updatedRecord.getInwardNo(), "Updated the Record ",
-				ActivityLogUtil.getCurrentuserId());
+                    existingRecord.setPaidAmount(request.getPaidAmount() != null ? request.getPaidAmount() : 0);
+                    existingRecord.setPaymentDate(request.getPaymentDate());
+                    existingRecord.setPaymentType(request.getPaymentType());
+                    existingRecord.setBalanceAmount(existingRecord.getCashReceiptAmount() - existingRecord.getPaidAmount());
 
-		// entity to HubResponse
-		return convertToHubRespone(updatedRecord);
+                    existingRecord.setPaymentStatus(checkStatus(
+                            existingRecord.getLorryReceiptAmount(),
+                            existingRecord.getRebate(),
+                            existingRecord.getAfterRebate(),
+                            existingRecord.getOthers(),
+                            existingRecord.getCashReceiptAmount(),
+                            existingRecord.getPaidAmount(),
+                            existingRecord.getBalanceAmount()));
+                }
+
+                return saveAndLog(existingRecord, "Updated PAID Record");
+            }
+        }
+
+		// Default fallback
+        return convertToHubRespone(existingRecord);
 	}
+		
 
 	@Override
 	public void deleteHub(long lorryReceiptNo) {
@@ -358,6 +419,34 @@ public class HubServiceImpl implements HubService {
 		return hubRepository.saveAll(newHubEntryList);
 
 	}
+	
+	//--- test 
+	public List<HubEntity> convertXlTestRequestListToEntityListAndSave(List<XlTestRequest> xlTestRequestList) {
+
+		List<HubEntity> newHubEntryList = xlTestRequestList.stream()
+				.map(xlRequest -> HubEntity.builder()
+						.lorryReceiptNo(xlRequest.getLorryReceiptNo())
+						.inwardNo(xlRequest.getInwardNo())
+						.partyName(xlRequest.getPartyName())
+						.lorryReceiptDate(xlRequest.getLorryReceiptDate())
+						.pks(xlRequest.getPks())
+						.weight(xlRequest.getWeight())
+						.lorryReceiptAmount(xlRequest.getLorryReceiptAmount())
+						.rebate(xlRequest.getRebate())
+						.afterRebate(xlRequest.getAfterRebate())
+						.others(xlRequest.getOthers())
+						.fromAddress(xlRequest.getFromAddress())
+						.cashReceiptAmount(xlRequest.getCashReceiptAmount())
+						.fromAddress(xlRequest.getFromAddress())
+						.paidAmount(xlRequest.getPaidAmount())
+						.balanceAmount(xlRequest.getBalanceAmount())
+						.build())
+				.collect(Collectors.toList());
+
+		// save all HubEntity List
+		return hubRepository.saveAll(newHubEntryList);
+
+	}
 
 	@Override
 	public List<HubEntity> getExistingLorryReceiptNumbersList(List<Long> lorryReceiptNumbers) {
@@ -371,12 +460,33 @@ public class HubServiceImpl implements HubService {
 
 	@Override
 	public XLFileResponse convertToXlResponse(HubEntity hubRequest) {
-
+		
 		return XLFileResponse.builder().lorryReceiptNo(hubRequest.getLorryReceiptNo())
 				.inwardNo(hubRequest.getInwardNo()).partyName(hubRequest.getPartyName())
 				.lorryReceiptDate(hubRequest.getLorryReceiptDate()).pks(hubRequest.getPks())
 				.weight(hubRequest.getWeight()).lorryReceiptAmount(hubRequest.getLorryReceiptAmount())
 				.fromAddress(hubRequest.getFromAddress()).build();
+	}
+	@Override
+	public XlTestResponse convertToXlResponseTest(HubEntity hubRequest) { 
+
+		return XlTestResponse.builder()
+				.lorryReceiptNo(hubRequest.getLorryReceiptNo())
+				.inwardNo(hubRequest.getInwardNo())
+				.partyName(hubRequest.getPartyName())
+				.lorryReceiptDate(hubRequest.getLorryReceiptDate())
+				.pks(hubRequest.getPks())
+				.weight(hubRequest.getWeight())
+				.lorryReceiptAmount(hubRequest.getLorryReceiptAmount())
+				.fromAddress(hubRequest.getFromAddress())
+				.cashReceiptNo(hubRequest.getCashReceiptNo())
+				.rebate(hubRequest.getRebate())
+				.afterRebate(hubRequest.getAfterRebate())
+				.others(hubRequest.getOthers())
+				.cashReceiptAmount(hubRequest.getCashReceiptAmount())
+				.paidAmount(hubRequest.getPaidAmount())
+				.balanceAmount(hubRequest.getBalanceAmount())
+				.build();
 	}
 
 	// Log Activity Register method

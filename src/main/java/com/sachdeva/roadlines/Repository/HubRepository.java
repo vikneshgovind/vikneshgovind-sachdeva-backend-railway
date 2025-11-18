@@ -43,6 +43,8 @@ public interface HubRepository extends JpaRepository<HubEntity, Long>, JpaSpecif
 	
 	boolean existsByPartyName(String partyName); 
 	
+	boolean existsByInwardNo(String inwardNo);
+	
 	/* Bulk Bill creation */
 	List<HubEntity> findByPartyNameOrderByLorryReceiptNoAsc(String partyName);
 
