@@ -59,5 +59,8 @@ public interface HubService {
 	// bulk Bill creation
 	BulkBillResponse getPartyPendingSummaryToBulkBill(String partyName);
     String applyPartyPaymentToBulkBill(String partyName, int paidAmount, String paymentType, LocalDate paymentDate);
+    
+    // get PartyName based total Balance amount 
+    List<PartyBalanceProjection> getPartyNameWiseTotalBalanceAmount();
 
 }

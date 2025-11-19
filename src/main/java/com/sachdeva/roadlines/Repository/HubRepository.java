@@ -6,9 +6,11 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 
 import com.sachdeva.roadlines.Entity.HubEntity;
 import com.sachdeva.roadlines.Enum.HubStatus;
+import com.sachdeva.roadlines.Service.PartyBalanceProjection;
 
 public interface HubRepository extends JpaRepository<HubEntity, Long>, JpaSpecificationExecutor<HubEntity>{
 
@@ -49,6 +51,17 @@ public interface HubRepository extends JpaRepository<HubEntity, Long>, JpaSpecif
 	List<HubEntity> findByPartyNameOrderByLorryReceiptNoAsc(String partyName);
 
     List<HubEntity> findByPartyNameAndPaymentStatusOrderByLorryReceiptNoAsc(String partyName, HubStatus paymentStatus);
+    
+    /* partyName based get Bending balance total amount */
+    @Query("""
+    	       SELECT h.partyName AS partyName,
+    	              SUM(h.balanceAmount) AS totalBalanceAmount
+    	       FROM HubEntity h
+    	       GROUP BY h.partyName
+    	       ORDER BY h.partyName ASC
+    	       """)
+    	List<PartyBalanceProjection> getPartyWiseTotalBalance();
+
     
 	
 }

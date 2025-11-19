@@ -32,6 +32,7 @@ import com.sachdeva.roadlines.DTO.hub.XlTestRequest;
 import com.sachdeva.roadlines.DTO.hub.XlTestResponse;
 import com.sachdeva.roadlines.Entity.HubEntity;
 import com.sachdeva.roadlines.Service.HubService;
+import com.sachdeva.roadlines.Service.PartyBalanceProjection;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -43,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 public class HubController {
 
 	private final HubService hubService;
+
 
 	// Test Method
 	@GetMapping("/tests")
@@ -158,50 +160,50 @@ public class HubController {
 	
 	// --------
 	// XL File hub Data's PENDING All record Add
-		@PostMapping("/xl-file-test")
-		public ResponseEntity<XlTestInsertResponse> createdBulkPendingHub(
-				@RequestBody @Valid List<@Valid XlTestRequest> xlTestRequestList) {
+	@PostMapping("/xl-file-test")
+	public ResponseEntity<XlTestInsertResponse> createdBulkPendingHub(
+			@RequestBody @Valid List<@Valid XlTestRequest> xlTestRequestList) {
 
-			// coming Request in LR and INWARD Numbers
-			List<Long> comingLRNumbers = xlTestRequestList.stream().map(XlTestRequest::getLorryReceiptNo).toList();
-			List<String> comingInwardNumbers = xlTestRequestList.stream().map(XlTestRequest::getInwardNo).toList();
+		// coming Request in LR and INWARD Numbers
+		List<Long> comingLRNumbers = xlTestRequestList.stream().map(XlTestRequest::getLorryReceiptNo).toList();
+		List<String> comingInwardNumbers = xlTestRequestList.stream().map(XlTestRequest::getInwardNo).toList();
 
-			// Table already there LR and INWARD Numbers get
-			Set<Long> existingLRNumbers = hubService.getExistingLorryReceiptNumbersList(comingLRNumbers).stream()
-					.map(HubEntity::getLorryReceiptNo).collect(Collectors.toSet());
-			Set<String> existingInwardNumbers = hubService.getExistingInwardNumbersList(comingInwardNumbers).stream()
-					.map(HubEntity::getInwardNo).collect(Collectors.toSet());
+		// Table already there LR and INWARD Numbers get
+		Set<Long> existingLRNumbers = hubService.getExistingLorryReceiptNumbersList(comingLRNumbers).stream()
+				.map(HubEntity::getLorryReceiptNo).collect(Collectors.toSet());
+		Set<String> existingInwardNumbers = hubService.getExistingInwardNumbersList(comingInwardNumbers).stream()
+				.map(HubEntity::getInwardNo).collect(Collectors.toSet());
 
-			// Existing LR and INWARD Numbers without new coming xlListRequestList LR and
-			// INWARD Numbers
-			List<XlTestRequest> newHubDatas = xlTestRequestList.stream()
-					.filter(req -> !existingLRNumbers.contains(req.getLorryReceiptNo())
-							&& !existingInwardNumbers.contains(req.getInwardNo()))
-					.toList();
+		// Existing LR and INWARD Numbers without new coming xlListRequestList LR and
+		// INWARD Numbers
+		List<XlTestRequest> newHubDatas = xlTestRequestList.stream()
+				.filter(req -> !existingLRNumbers.contains(req.getLorryReceiptNo())
+						&& !existingInwardNumbers.contains(req.getInwardNo()))
+				.toList();
 
-			// Already existing LR and INWARD Numbers contains the coming LXFileRequest
-			List<XlTestRequest> skippedHubData = xlTestRequestList.stream()
-					.filter(req -> existingLRNumbers.contains(req.getLorryReceiptNo())
-							&& existingInwardNumbers.contains(req.getInwardNo()))
-					.toList();
-			System.out.println("skippedHubData datas :" + skippedHubData);
+		// Already existing LR and INWARD Numbers contains the coming LXFileRequest
+		List<XlTestRequest> skippedHubData = xlTestRequestList.stream()
+				.filter(req -> existingLRNumbers.contains(req.getLorryReceiptNo())
+						&& existingInwardNumbers.contains(req.getInwardNo()))
+				.toList();
+		System.out.println("skippedHubData datas :" + skippedHubData);
 
-			// save the new Hub data's
-			List<HubEntity> savedHubDatas = hubService.convertXlTestRequestListToEntityListAndSave(newHubDatas);
-			
+		// save the new Hub data's
+		List<HubEntity> savedHubDatas = hubService.convertXlTestRequestListToEntityListAndSave(newHubDatas);
+		
 
-			// saved Hub data's response
-			List<XlTestResponse> insertedHubDatas = savedHubDatas.stream().map(hubService::convertToXlResponseTest).toList();
-			System.out.println("inserted datas :" + insertedHubDatas);
-			XlTestInsertResponse xLDataInsertResponseTest = XlTestInsertResponse.builder()
-					.insertedCountTest(insertedHubDatas.size())
-					.skippedCountTest(skippedHubData.size())
-					.insertedXlDatasTest(insertedHubDatas)
-					.skippedXlDatasTest(skippedHubData)
-					.build();
+		// saved Hub data's response
+		List<XlTestResponse> insertedHubDatas = savedHubDatas.stream().map(hubService::convertToXlResponseTest).toList();
+		System.out.println("inserted datas :" + insertedHubDatas);
+		XlTestInsertResponse xLDataInsertResponseTest = XlTestInsertResponse.builder()
+				.insertedCountTest(insertedHubDatas.size())
+				.skippedCountTest(skippedHubData.size())
+				.insertedXlDatasTest(insertedHubDatas)
+				.skippedXlDatasTest(skippedHubData)
+				.build();
 
-			return ResponseEntity.ok(xLDataInsertResponseTest);
-		}
+		return ResponseEntity.ok(xLDataInsertResponseTest);
+	}
 
 /* Bulk bill controller methods */
 	
@@ -218,6 +220,16 @@ public class HubController {
     	System.out.println("coming bulk paid Details :\n"+ request.toString());
         return ResponseEntity.ok(hubService.applyPartyPaymentToBulkBill(request.getPartyName(), request.getPaidAmount(), request.getPaymentType(), request.getPaymentDate()));
     }
+    
+    
+  //PARTY-WISE TOTAL BALANCE API
+    @GetMapping("/party-wise-balance")
+    public List<PartyBalanceProjection> getPartyWiseBalance() {
+    	return  hubService.getPartyNameWiseTotalBalanceAmount();
+    }
+    
 
 }
+
+
 

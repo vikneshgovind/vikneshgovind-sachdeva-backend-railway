@@ -30,6 +30,7 @@ import com.sachdeva.roadlines.Enum.HubStatus;
 import com.sachdeva.roadlines.Repository.ActivityLogRepository;
 import com.sachdeva.roadlines.Repository.HubRepository;
 import com.sachdeva.roadlines.Service.HubService;
+import com.sachdeva.roadlines.Service.PartyBalanceProjection;
 import com.sachdeva.roadlines.Util.ActivityLogUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -632,6 +633,14 @@ public class HubServiceImpl implements HubService {
                 paidAmount, partyName, totalPendingBefore, totalPendingAfter
         );
     }
+    
+    
+    /* Parytn name Based Get the total Balance Amount*/
+    
+	@Override
+	public List<PartyBalanceProjection> getPartyNameWiseTotalBalanceAmount() {
+		return hubRepository.getPartyWiseTotalBalance();
+	}
 
 }
 
