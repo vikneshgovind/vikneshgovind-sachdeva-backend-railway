@@ -1,8 +1,6 @@
 package com.sachdeva.roadlines.Service.Implementation;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Row;
@@ -20,34 +18,30 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ExcelServiceImpl implements ExcelService {
-	
-	private final ExcelRepository excelRepository;
-	
-	public ByteArrayInputStream exportAllHubDataToExcel () throws IOException {
-		
-		List<HubEntity> allHubDataList = excelRepository.findAll();
-		
-		Workbook workbook = new XSSFWorkbook();
-		Sheet sheet = workbook.createSheet("Sachdeva Roadlines");
-		
-		
-		Row header = sheet.createRow(0);
-		
-		String[] columns = {
-                "LR Number","LR Date", "Inward", "Party Name", "PKS", "Weight", "LR Amount", "CR Number", 
-                "CR Date", "Rebate", "After Rebate","Others", 
-                "CR Amount", "Paid Amount", "Balance Amount", "Hub Status",
-                "Payment Date", "Payment Type", "From Address", "Branch", "created At", "Updated At", "ID"
-                  
-        };
-		
-		/*
-		 * private Timestamp createdAt;
 
-	@UpdateTimestamp
-	private Timestamp updatedAt;*/
-		
-		// Header Row
+    private final ExcelRepository excelRepository;
+
+    @Override
+    public byte[] exportAllHubDataToExcel() throws Exception {
+
+        List<HubEntity> allHubDataList = excelRepository.findAll();
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Sachdeva Roadlines");
+
+        Row header = sheet.createRow(0);
+
+        String[] columns = {
+                "LR Number", "LR Date", "Inward", "Party Name",
+                "PKS", "Weight", "LR Amount",
+                "CR Number", "CR Date",
+                "Rebate", "After Rebate", "Others",
+                "CR Amount", "Paid Amount", "Balance Amount",
+                "Hub Status", "Payment Date", "Payment Type",
+                "From Address", "Branch",
+                "Created At", "Updated At", "ID"
+        };
+
         for (int i = 0; i < columns.length; i++) {
             header.createCell(i).setCellValue(columns[i]);
         }
@@ -57,33 +51,37 @@ public class ExcelServiceImpl implements ExcelService {
         for (HubEntity hub : allHubDataList) {
             Row row = sheet.createRow(rowIdx++);
 
-            
-            row.createCell(1).setCellValue(hub.getLorryReceiptNo());
-            row.createCell(2).setCellValue(hub.getLorryReceiptDate().toString());
-            row.createCell(3).setCellValue(hub.getInwardNo());
-            row.createCell(4).setCellValue(hub.getPartyName());            
-            row.createCell(5).setCellValue(hub.getPks());
-            row.createCell(6).setCellValue(hub.getWeight());
-            row.createCell(7).setCellValue(hub.getLorryReceiptAmount());
-            row.createCell(8).setCellValue(hub.getCashReceiptNo());
-            row.createCell(9).setCellValue(hub.getCashReceiptDate() != null ? hub.getCashReceiptDate().toString() : "");
-            row.createCell(10).setCellValue(hub.getRebate());
-            row.createCell(11).setCellValue(hub.getAfterRebate());
-            row.createCell(12).setCellValue(hub.getOthers());
-            row.createCell(13).setCellValue(hub.getCashReceiptAmount());
-            row.createCell(14).setCellValue(hub.getPaidAmount());
-            row.createCell(15).setCellValue(hub.getBalanceAmount());
-            row.createCell(16).setCellValue(hub.getPaymentStatus().toString());
-            row.createCell(17).setCellValue(hub.getPaymentDate() != null ? hub.getPaymentDate().toString() : "");
-            row.createCell(18).setCellValue(hub.getPaymentType());
-            row.createCell(19).setCellValue(hub.getFromAddress());
-            row.createCell(20).setCellValue(hub.getBranch());
-            row.createCell(21).setCellValue(hub.getCreatedAt());
-            row.createCell(22).setCellValue(hub.getUpdatedAt());
-            row.createCell(23).setCellValue(hub.getId());
+            row.createCell(0).setCellValue(hub.getLorryReceiptNo());
+            row.createCell(1).setCellValue(hub.getLorryReceiptDate().toString());
+            row.createCell(2).setCellValue(hub.getInwardNo());
+            row.createCell(3).setCellValue(hub.getPartyName());
+            row.createCell(4).setCellValue(hub.getPks());
+            row.createCell(5).setCellValue(hub.getWeight());
+            row.createCell(6).setCellValue(hub.getLorryReceiptAmount());
+
+            row.createCell(7).setCellValue(hub.getCashReceiptNo());
+            row.createCell(8).setCellValue(hub.getCashReceiptDate() != null ? hub.getCashReceiptDate().toString() : "");
+
+            row.createCell(9).setCellValue(hub.getRebate());
+            row.createCell(10).setCellValue(hub.getAfterRebate());
+            row.createCell(11).setCellValue(hub.getOthers());
+            row.createCell(12).setCellValue(hub.getCashReceiptAmount());
+            row.createCell(13).setCellValue(hub.getPaidAmount());
+            row.createCell(14).setCellValue(hub.getBalanceAmount());
+
+            row.createCell(15).setCellValue(hub.getPaymentStatus().toString());
+
+            row.createCell(16).setCellValue(hub.getPaymentDate() != null ? hub.getPaymentDate().toString() : "");
+            row.createCell(17).setCellValue(hub.getPaymentType());
+            row.createCell(18).setCellValue(hub.getFromAddress());
+            row.createCell(19).setCellValue(hub.getBranch());
+
+            row.createCell(20).setCellValue(hub.getCreatedAt() != null ? hub.getCreatedAt().toString() : "");
+            row.createCell(21).setCellValue(hub.getUpdatedAt() != null ? hub.getUpdatedAt().toString() : "");
+
+            row.createCell(22).setCellValue(hub.getId());
         }
 
-        // Auto column resize
         for (int i = 0; i < columns.length; i++) {
             sheet.autoSizeColumn(i);
         }
@@ -92,8 +90,6 @@ public class ExcelServiceImpl implements ExcelService {
         workbook.write(out);
         workbook.close();
 
-        return new ByteArrayInputStream(out.toByteArray());
-    
-	}
-	
+        return out.toByteArray();
+    }
 }
