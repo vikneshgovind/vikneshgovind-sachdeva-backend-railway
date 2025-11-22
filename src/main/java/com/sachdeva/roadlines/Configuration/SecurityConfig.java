@@ -19,7 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+//import org.springframework.web.filter.CorsFilter;
 
 import static org.springframework.http.HttpMethod.*;
 
@@ -88,6 +88,7 @@ public class SecurityConfig {
 		return new BCryptPasswordEncoder();
 	}
 
+	/*
 	@Bean
 	public CorsFilter corsFilter() {
 		return new CorsFilter(corsConfigurationSource());
@@ -106,6 +107,25 @@ public class SecurityConfig {
 
 		return source;
 	}
+	*/
+	
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+	    CorsConfiguration config = new CorsConfiguration();
+	    config.setAllowedOrigins(List.of(
+	        "https://sachdeva-erode-hub.vercel.app",
+	        "http://localhost:5174"
+	    ));
+	    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+	    config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+	    config.setAllowCredentials(true);
+
+	    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+	    source.registerCorsConfiguration("/**", config);
+
+	    return source;
+	}
+
 
 
 	@Bean
