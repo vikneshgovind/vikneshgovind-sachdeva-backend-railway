@@ -19,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+//import org.springframework.web.filter.CorsFilter;
 
 import static org.springframework.http.HttpMethod.*;
 
@@ -32,86 +33,109 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final AppUserDetailsService appUserDetailsService;
-    private final JwtRequestFilter jwtRequestFilter;
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+	private final AppUserDetailsService appUserDetailsService; // Constructor Injection
+	// JwtRequestFilter our Filter register
+	private final JwtRequestFilter jwtRequestFilter;
+	// Global Exception Handler our filter register
+	private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	@Bean
+	public SecurityFilterChain securityFilterChin(HttpSecurity http) throws Exception {
 
-        http
-            .cors(Customizer.withDefaults())
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+		http.cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests(auth -> auth
 
-                // Public APIs
-                .requestMatchers(
-                        "/login",
-                        "/register",
-                        "/send-reset-otp",
-                        "/reset-password",
-                        "/logout",
-                        "/encode",
-                        "/welcome"
-                ).permitAll()
+				// Public end points
+				.requestMatchers("/login", "/register", "/send-reset-otp", "/reset-password", "/logout", "/encode", "/welcome")
+				.permitAll()
+				
 
-                // Admin
-                .requestMatchers(DELETE, "/hub/{lr_number}").hasRole("ADMIN")
-                .requestMatchers("/user/{user_id}", "/users-details-page-based-filter").hasRole("ADMIN")
+				// Role-based access
+				
+				// Same End point but different HTTP Method 
+				// Only ADMIN can delete
+				.requestMatchers(DELETE, "/hub/{lr_number}" ).hasRole("ADMIN")
+				
+				// ADMIN + MANAGER can update (PUT)
+				.requestMatchers(PUT, "/hub/{lr_number}" ).hasAnyRole("MANAGER", "ADMIN")
+				
+				// ADMIN only 
+				.requestMatchers( "/user/{user_id}", "/users-details-page-based-filter").hasRole("ADMIN") // only ADMIN
+				.requestMatchers( "/hub/**", "/dashboard/**", "/activity/**").hasAnyRole("ADMIN", "MANAGER") // ADMIN + MANAGER
+				
+				// All roles can access home APIs
+				.requestMatchers("/home/**", "/excel/**").hasAnyRole("ADMIN", "MANAGER", "USER") // all roles
 
-                // Manager + Admin
-                .requestMatchers(PUT, "/hub/{lr_number}").hasAnyRole("MANAGER", "ADMIN")
-                .requestMatchers("/hub/**", "/dashboard/**", "/activity/**").hasAnyRole("MANAGER", "ADMIN")
+				// Any other must be authenticated
+				.anyRequest().authenticated())
 
-                // All roles
-                .requestMatchers("/home/**", "/excel/**").hasAnyRole("ADMIN", "MANAGER", "USER")
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.logout(AbstractHttpConfigurer::disable)
 
-                // Others require authentication
-                .anyRequest().authenticated()
-            )
+				// JwtRequestFilter before UsernamePasswordAuthenticationFilter(JwtRequestFilter
+				// our Filter register)
+				.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
 
-            // JWT Filter
-            .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
+				// Global Exception Handler register
+				.exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint));
 
-            // Exception handling
-            .exceptionHandling(ex ->
-                    ex.authenticationEntryPoint(customAuthenticationEntryPoint)
-            );
+		return http.build();
 
-        return http.build();
-    }
+	}
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+	// Password Encoder and CORS Filter
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
 
-    // CORS configuration
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+	/*
+	@Bean
+	public CorsFilter corsFilter() {
+		return new CorsFilter(corsConfigurationSource());
+	}
 
-        config.setAllowedOrigins(List.of(
-                "https://sachdeva-erode-hub.vercel.app",
-                "http://localhost:5174"
-        ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
+	private CorsConfigurationSource corsConfigurationSource() {
+		// create a object for corsConfiguration
+		CorsConfiguration config = new CorsConfiguration();
+		config.setAllowedOrigins(List.of("https://sachdeva-erode-hub.vercel.app", "http://localhost:5174"));
+		config.setAllowedMethods(List.of("GET", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"));
+		config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+		config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", config);
 
-        return source;
-    }
+		return source;
+	}
+	*/
+	
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+	    CorsConfiguration config = new CorsConfiguration();
+	    config.setAllowedOrigins(List.of(
+	        "https://sachdeva-erode-hub.vercel.app",
+	        "http://localhost:5174"
+	    ));
+	    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+	    config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+	    config.setAllowCredentials(true);
 
-    // Authentication provider
-    @Bean
-    public AuthenticationManager authenticationManager() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(appUserDetailsService);
-        authenticationProvider.setPasswordEncoder(passwordEncoder());
-        return new ProviderManager(authenticationProvider);
-    }
+	    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+	    source.registerCorsConfiguration("/**", config);
+
+	    return source;
+	}
+
+
+
+	@Bean
+	public AuthenticationManager authonticationManager() {
+		DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+
+		authenticationProvider.setUserDetailsService(appUserDetailsService);
+		authenticationProvider.setPasswordEncoder(passwordEncoder());
+
+		return new ProviderManager(authenticationProvider);
+	}
+
 }
