@@ -107,6 +107,7 @@ public class SecurityConfig {
 		return source;
 	}
 
+
 	@Bean
 	public AuthenticationManager authonticationManager() {
 		DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();

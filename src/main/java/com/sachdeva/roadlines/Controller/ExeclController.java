@@ -20,21 +20,22 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/excel")
 public class ExeclController {
 
-	private final ExcelService excelService;
-	
-	
-	@GetMapping("/download-all-hub-datas-excel")
-    public ResponseEntity<InputStreamResource> downloadAllHubDatasExcel() throws IOException {
+ private final ExcelService excelService;
 
-        ByteArrayInputStream in = excelService.exportAllHubDataToExcel();
+ @GetMapping("/download-all-hub-datas-excel")
+ public ResponseEntity<InputStreamResource> downloadAllHubDatasExcel() throws IOException {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Disposition", "attachment; filename=roadlines_data.xlsx");
- 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(new InputStreamResource(in));
-    }
-	
+     ByteArrayInputStream in = excelService.exportAllHubDataToExcel();
+
+     HttpHeaders headers = new HttpHeaders();
+     headers.add("Content-Disposition", "attachment; filename=roadlines_data.xlsx");
+     headers.add("Access-Control-Expose-Headers", "Content-Disposition");
+
+     return ResponseEntity.ok()
+             .headers(headers)
+             .contentType(MediaType.APPLICATION_OCTET_STREAM)
+             .body(new InputStreamResource(in));
+ }
+
 }
+
