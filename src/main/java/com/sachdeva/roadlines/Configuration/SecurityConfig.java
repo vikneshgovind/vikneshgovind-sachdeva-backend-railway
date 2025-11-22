@@ -63,7 +63,7 @@ public class SecurityConfig {
 				.requestMatchers( "/hub/**", "/dashboard/**", "/activity/**").hasAnyRole("ADMIN", "MANAGER") // ADMIN + MANAGER
 				
 				// All roles can access home APIs
-				.requestMatchers("/home/**").hasAnyRole("ADMIN", "MANAGER", "USER") // all roles
+				.requestMatchers("/home/**", "/excel").hasAnyRole("ADMIN", "MANAGER", "USER") // all roles
 
 				// Any other must be authenticated
 				.anyRequest().authenticated())

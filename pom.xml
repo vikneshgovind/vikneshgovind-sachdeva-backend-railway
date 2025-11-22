@@ -115,6 +115,12 @@
 		    <artifactId>spring-dotenv</artifactId>
 		    <version>3.0.0</version>
 		</dependency>
+		<!-- xl file to send the all HubEntity data's -->
+		<dependency>
+		    <groupId>org.apache.poi</groupId>
+		    <artifactId>poi-ooxml</artifactId>
+		    <version>5.2.5</version>
+		</dependency>
 
 	</dependencies>
 

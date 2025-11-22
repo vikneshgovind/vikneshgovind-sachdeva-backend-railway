@@ -441,6 +441,7 @@ public class HubServiceImpl implements HubService {
 						.fromAddress(xlRequest.getFromAddress())
 						.paidAmount(xlRequest.getPaidAmount())
 						.balanceAmount(xlRequest.getBalanceAmount())
+						.paymentStatus(HubStatus.PENDING)
 						.build())
 				.collect(Collectors.toList());
 
@@ -635,8 +636,7 @@ public class HubServiceImpl implements HubService {
     }
     
     
-    /* Parytn name Based Get the total Balance Amount*/
-    
+    /* Paryt name Based Get the total Balance Amount*/
 	@Override
 	public List<PartyBalanceProjection> getPartyNameWiseTotalBalanceAmount() {
 		return hubRepository.getPartyWiseTotalBalance();
